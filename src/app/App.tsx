@@ -593,10 +593,18 @@ function PanoramaViewer({ image }: { image: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [scrollTop, setScrollTop] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isAutoPanning, setIsAutoPanning] = useState(true);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = (containerRef.current.scrollHeight - containerRef.current.clientHeight) / 2;
+    }
+  }, []);
 
   // Momentum tracking refs
   const velocityRef = useRef(0);
@@ -639,7 +647,9 @@ function PanoramaViewer({ image }: { image: string }) {
     setHasInteracted(true);
     
     setStartX(e.pageX - container.offsetLeft);
+    setStartY(e.pageY - container.offsetTop);
     setScrollLeft(container.scrollLeft);
+    setScrollTop(container.scrollTop);
     lastXRef.current = e.pageX;
     lastTimeRef.current = performance.now();
   };
@@ -651,8 +661,11 @@ function PanoramaViewer({ image }: { image: string }) {
     if (!container) return;
     
     const x = e.pageX - container.offsetLeft;
+    const y = e.pageY - container.offsetTop;
     const walk = (x - startX) * 1.6; // multiplier for speed
+    const walkY = (y - startY) * 1.6;
     let nextScroll = scrollLeft - walk;
+    container.scrollTop = scrollTop - walkY;
     
     // Calculate velocity
     const now = performance.now();
@@ -726,7 +739,9 @@ function PanoramaViewer({ image }: { image: string }) {
     setHasInteracted(true);
     
     setStartX(e.touches[0].pageX - container.offsetLeft);
+    setStartY(e.touches[0].pageY - container.offsetTop);
     setScrollLeft(container.scrollLeft);
+    setScrollTop(container.scrollTop);
     lastXRef.current = e.touches[0].pageX;
     lastTimeRef.current = performance.now();
   };
@@ -737,8 +752,11 @@ function PanoramaViewer({ image }: { image: string }) {
     if (!container) return;
     
     const x = e.touches[0].pageX - container.offsetLeft;
+    const y = e.touches[0].pageY - container.offsetTop;
     const walk = (x - startX) * 1.6;
+    const walkY = (y - startY) * 1.6;
     let nextScroll = scrollLeft - walk;
+    container.scrollTop = scrollTop - walkY;
     
     const now = performance.now();
     const dt = now - lastTimeRef.current;
@@ -774,7 +792,7 @@ function PanoramaViewer({ image }: { image: string }) {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUpOrLeave}
-        className="w-full flex-1 overflow-x-hidden relative cursor-grab active:cursor-grabbing flex"
+        className="w-full flex-1 overflow-hidden relative cursor-grab active:cursor-grabbing flex"
       >
         {[0, 1, 2, 3].map((i) => (
           <img
@@ -786,7 +804,7 @@ function PanoramaViewer({ image }: { image: string }) {
               transformOrigin: "center center",
               transition: isDragging ? "none" : "transform 0.25s ease-out",
             }}
-            className="h-full max-w-none min-w-[200%] object-cover pointer-events-none"
+            className="h-[140%] max-w-none min-w-[200%] object-cover pointer-events-none"
           />
         ))}
 
@@ -851,7 +869,7 @@ function ProjectModal({ project, onClose }: { project: Project; onClose: () => v
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
+  const handleBackdropMouseDown = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
     }
@@ -861,7 +879,7 @@ function ProjectModal({ project, onClose }: { project: Project; onClose: () => v
 
   return (
     <div
-      onClick={handleBackdropClick}
+      onMouseDown={handleBackdropMouseDown}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md modal-backdrop"
     >
       <div className="relative w-full max-w-6xl h-[90vh] md:h-[80vh] bg-[#0D0D0D] border border-white/10 rounded-sm shadow-2xl overflow-hidden flex flex-col md:flex-row modal-panel">
